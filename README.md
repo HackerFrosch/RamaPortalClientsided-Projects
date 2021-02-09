@@ -17,9 +17,7 @@ Ordner "Lernumgebung Sync"
 Für die Lernumgebung Offline Synchronisation ist für Windows 10 (64bit) eine .exe Datei vorhanden. Diese kann einfach benutzt und per Doppelklick ausgeführt
 werden.
 
-Für andere Betriebssysteme, oder falls der Sourcecode genutzt werden möchte, kann die .pyw Datei genutzt werden. Dafür müssen aber Python und
-die beiden Module `beautifulsoup4` und `requests` installiert sein. [Python](https://www.python.org/downloads/ "Zum Python Download") kann auf
-der eigenen Website gedownloaded und nach Anleitung installiert werden.
+Für andere Betriebssysteme, oder falls der Sourcecode genutzt werden möchte, kann die .pyw Datei genutzt werden. Dafür muss [Python](https://www.python.org/downloads/ "Zum Python Download") installiert sein.
 
 Weitere Module, die das Programm benötigt, installiert es beim ersten Start automatisch. Danach schließt sich das Programm und kann einfach neu gestartet werden.
 

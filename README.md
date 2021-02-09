@@ -21,9 +21,7 @@ Für andere Betriebssysteme, oder falls der Sourcecode genutzt werden möchte, k
 die beiden Module `beautifulsoup4` und `requests` installiert sein. [Python](https://www.python.org/downloads/ "Zum Python Download") kann auf
 der eigenen Website gedownloaded und nach Anleitung installiert werden.
 
-Die beiden Module werden mithilfe von pip, einem in Python beinhalteten
- Installer für Python Module installiert werden. Dazu eine Konsole öffnen und die Befehle `pip install beatifulsoup4` und `pip install requests`
- ausführen.
+Weitere Module, die das Programm benötigt, installiert es beim ersten Start automatisch. Danach schließt sich das Programm und kann einfach neu gestartet werden.
 
 Bei der ersten Ausführung der .exe Datei wird der Windows Defender das Ausführen blockieren. Um es zuzulassen „weitere Informationen“ anklicken und dann „Trotzdem ausführen“ auswählen.
 

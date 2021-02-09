@@ -2,6 +2,8 @@ import requests
 import os
 import json
 import shutil
+import subprocess
+import sys
 from bs4 import BeautifulSoup
 from queue import LifoQueue
 from tkinter import *
@@ -40,14 +42,16 @@ class ToolTip(object):
 
 # initialize Tkinter root
 root = Tk()
-root.wm_title("LU Synchronisation")
+root.wm_title("RaMa-Client Sync")
 root.wm_minsize(300, 330)
 root.wm_maxsize(300, 330)
 root.withdraw()
 
-
+print(os.path.abspath(__file__))
 # some global variables
 tmpdir = os.environ["localappdata"].replace("\\", "/") + "/RamaPortal Client"
+process_icon_path = os.path.abspath(__file__).replace("\LernumgebungSynchronisation.pyw", "") + "\process_icon.ico"
+root.iconbitmap(process_icon_path)
 url = "https://portal.rama-mainz.de"
 s = requests.Session()
 error_log = []
@@ -67,6 +71,22 @@ font_color = "light grey"
 rama_color = "#A51320"
 rama_color_active = "#9E1220"
 
+def auto_package_install():
+    if "requests" in sys.modules:
+        print("[Package Install] Requests ist installiert!")
+    else:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
+        print("[Package Install] Requests wurde installiert!")
+        print("[Package Install] Anwendung wird neu gestartet!")
+        quit(0)
+
+    if "beautifulsoup4" in sys.modules or "bs4" in sys.modules:
+        print("[Package Install] bs4 ist installiert!")
+    else:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "beautifulsoup4"])
+        print("[Package Install] bs4 wurde installiert!")
+        print("[Package Install] Anwendung wird neu gestartet!")
+        quit(0)
 
 def check_login():
     return not (BeautifulSoup(s.post(url + "/index.php", {"username": userdata.get("username"), "password": userdata.get(
@@ -173,7 +193,7 @@ def download_file(file, dir_string):
 
     global error_log
     s_file = None
-    print("Downloading File", file.get("name"), "to", dir_string + "/" + file.get("name") + ext)
+    print("[Sync] Downloading File", file.get("name"), "to", dir_string + "/" + file.get("name") + ext)
     # noinspection PyBroadException
     try:
         resp = s.get(url + "/edu/edufile.php?id=" + file.get("id") + "&download=1")
@@ -181,7 +201,7 @@ def download_file(file, dir_string):
         s_file.write(buffer)
         s_file.write(resp.content)
     except Exception as ex:
-        error_log.append(("Beim speichern der folgenden Datei ist ein Fehler aufgetreten: ", ex, file))
+        error_log.append(("[Sync] Beim speichern der folgenden Datei ist ein Fehler aufgetreten: ", ex, file))
     try:
         s_file.close()
     except AttributeError:
@@ -204,7 +224,7 @@ def syncLU(destroy=False):
     delete_cb.config(state=DISABLED)
     sync_new_cb.config(state=DISABLED)
 
-    if delete_before_sync.get() and messagebox.askyesno("Ordner löschen?", 'Soll wirklich der gesamte Ordner "Lernumgebung OfflineSync" gelöscht werden? Auch eigens hinzugefügte Dateien werden gelöscht.'):
+    if delete_before_sync.get() and messagebox.askyesno("Ordner löschen?", 'Soll der gesamte Ordner "Lernumgebung OfflineSync" gelöscht werden?'):
         try:
             info_label.config(text="lösche alten Ordner")
             root.update()
@@ -232,7 +252,7 @@ def syncLU(destroy=False):
 
         while i < len(groupList):
             for sect, dir_sa in [("publ", "Öffentlich"), ("priv", "Privat")]:
-                print(groupList[i], groupList[i + 1], dir_sa)
+                print("[Sync] " + groupList[i], groupList[i + 1], dir_sa)
                 progress_label.config(text=groupList[i] + " (" + str(int(i / 2)) + "/" + str(int(len(groupList) / 2)) + ")")
                 root.update_idletasks()
 
@@ -258,7 +278,7 @@ def syncLU(destroy=False):
                         while file_name[len(file_name) - 1] == " ":
                             file_name = file_name[:-1]
                         current_file.update({"name": file_name})
-                        print(current_file.get("name"))
+                        print("[Sync] " + current_file.get("name"))
 
                         if current_file.get("typ") == "dir":
                             # directory
@@ -266,7 +286,7 @@ def syncLU(destroy=False):
                             mk_dir(dir_string)
                             current_material_list = get_material_list(url + "/edu/edumain.php?gruppe=" + groupList[i + 1] + "&section=" + sect + "&dir=" + current_file.get("id"))
                             n = 0
-                            print("changed dir to", current_file.get("name"))
+                            print("[Sync] changed dir to", current_file.get("name"))
                             info_label.config(text=current_file.get("name"))
                             root.update_idletasks()
                         elif current_file.get("typ") == "diropen":
@@ -294,7 +314,7 @@ def syncLU(destroy=False):
     except Exception as ex:
         error_log.append(("Anderweitige Fehlermeldung: ", ex, str(ex.__traceback__)))
 
-    print("Finished with", len(error_log), "errors")
+    print("[Sync] Finished with", len(error_log), "errors")
     error_log_file = open(LU_dir + "/ErrorLog.txt", "w+")
     for error in error_log:
         print(error)
@@ -316,12 +336,13 @@ def syncLU(destroy=False):
         sys.exit(0)
 
 
+auto_package_install()
 # check for available internet connection
 v = None
 try:
     v = requests.get("https://raw.githubusercontent.com/alexditi/RamaPortalClientsided-Projects/master/Lernumgebung%20Sync/updateLog.json", timeout=5)
 except (requests.ConnectionError, requests.Timeout):
-    messagebox.showwarning("Keine Internetverbindung!", "Du bist nicht mit dem Internet verbunden. Stelle sicher dass du mit dem Internet verbunden ist und starte die App erneut.")
+    messagebox.showwarning("Keine Internetverbindung!", "Stelle sicher dass du mit dem Internet verbunden ist und starte die App erneut.")
     try:
         v = requests.get("https://raw.githubusercontent.com/alexditi/RamaPortalClientsided-Projects/master/Lernumgebung%20Sync/updateLog.json", timeout=5)
     except (requests.ConnectionError, requests.Timeout):
@@ -417,7 +438,7 @@ else:
         up_app.write(requests.get("https://github.com/alexditi/RamaPortalClientsided-Projects/raw/" + updateLog.get("version") + "/Lernumgebung Sync/LernumgebungSynchronisation.exe").content)
         up_app.close()
 
-        messagebox.showinfo("Download abgeschlossen", "Die neue Datei ist im Download Ordner zu finden und kann benutzt werden. Die alte Datei kann gelöscht werden.")
+        messagebox.showinfo("Download abgeschlossen!", "Die neue Datei ist im Download Ordner zu finden und kann benutzt werden. Die alte Datei kann gelöscht werden.")
         exit(1)
 
 root.mainloop()

@@ -10,7 +10,7 @@ Unter Releases den neuesten Release downloaden und die .zip entpacken. In den je
 
 __ __
 
-### Lernumgebung Offline Synchronisation
+### Lernumgebung Sync
 
 Ordner "Lernumgebung Sync"
 

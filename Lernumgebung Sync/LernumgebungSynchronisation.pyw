@@ -1,14 +1,14 @@
-import requests
 import os
 import json
 import shutil
 import subprocess
 import sys
-from bs4 import BeautifulSoup
 from queue import LifoQueue
 from tkinter import *
 from tkinter import messagebox, filedialog
 from threading import Thread
+import importlib
+
 
 
 # tooltip class
@@ -39,8 +39,30 @@ class ToolTip(object):
         if tw:
             tw.destroy()
 
+# import or install requests and BeautifulSoup
+try:
+    import requests
+    print("[Info] Packet requests ist installiert!")
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
+    print("[Info] Packet requests wurde installiert!")
+finally:
+    import requests
+
+try:
+    from bs4 import BeautifulSoup
+    print("[Info] Packet bs4 ist installiert!")
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
+    print("[Info] Packet bs4 wurde installiert!")
+finally:
+    from bs4 import BeautifulSoup
+
 
 # initialize Tkinter root
+show_debug_messages = 0
+if show_debug_messages == 1:
+   print("[Debug] initialize Tkinter root")
 root = Tk()
 root.wm_title("RaMa-Client Sync")
 root.wm_minsize(300, 330)
@@ -50,7 +72,7 @@ root.withdraw()
 print(os.path.abspath(__file__))
 # some global variables
 tmpdir = os.environ["localappdata"].replace("\\", "/") + "/RamaPortal Client"
-process_icon_path = os.path.abspath(__file__).replace("\LernumgebungSynchronisation.pyw", "") + "\process_icon.ico"
+process_icon_path = os.path.abspath(__file__).replace("\RaMa-Client Sync.pyw", "") + "\process_icon.ico"
 root.iconbitmap(process_icon_path)
 url = "https://portal.rama-mainz.de"
 s = requests.Session()
@@ -66,27 +88,21 @@ sync_only_new.set(TRUE)
 version = "v4.1"
 
 # color constants
-bg_color = "#282828"
+bg_color = "#121212"
 font_color = "light grey"
 rama_color = "#A51320"
 rama_color_active = "#9E1220"
 
-def auto_package_install():
-    if "requests" in sys.modules:
-        print("[Package Install] Requests ist installiert!")
-    else:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
-        print("[Package Install] Requests wurde installiert!")
-        print("[Package Install] Anwendung wird neu gestartet!")
-        quit(0)
 
-    if "beautifulsoup4" in sys.modules or "bs4" in sys.modules:
-        print("[Package Install] bs4 ist installiert!")
-    else:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "beautifulsoup4"])
-        print("[Package Install] bs4 wurde installiert!")
-        print("[Package Install] Anwendung wird neu gestartet!")
-        quit(0)
+def on_closing(event=""):
+    global stopUpdate
+    if messagebox.askokcancel("Verlassen", "RaMa-Client Sync verlassen?"):
+        userdata_writer = open(tmpdir + "/userdata_client.json", 'w')
+        json.dump(userdata, userdata_writer)
+        userdata_writer.close()
+        stopUpdate = True
+        root.destroy()
+
 
 def check_login():
     return not (BeautifulSoup(s.post(url + "/index.php", {"username": userdata.get("username"), "password": userdata.get(
@@ -94,6 +110,8 @@ def check_login():
 
 
 def submit_userdata(event=""):
+    if show_debug_messages == 1:
+        print("[Debug] submitting userdata")
     global userdata_reader, userdata, LU_dir
     userdata_creator = open(tmpdir + "/userdata_LU.json", "w+")
     json.dump({"username": username_entry.get(), "password": password_entry.get(), "dir": dir_entry.get()}, userdata_creator)
@@ -149,7 +167,7 @@ def mk_dir(path):
         except FileExistsError:
             pass
     except Exception as ex:
-        error_log.append(("Folgender Pfad konnte nicht erstellt werden: ", ex, path))
+        error_log.append("Folgender Pfad konnte nicht erstellt werden: ", ex, path)
 
 
 def download_file(file, dir_string):
@@ -193,7 +211,7 @@ def download_file(file, dir_string):
 
     global error_log
     s_file = None
-    print("[Sync] Downloading File", file.get("name"), "to", dir_string + "/" + file.get("name") + ext)
+    print("[Info] Downloading File", file.get("name"), "to", dir_string + "/" + file.get("name") + ext)
     # noinspection PyBroadException
     try:
         resp = s.get(url + "/edu/edufile.php?id=" + file.get("id") + "&download=1")
@@ -201,7 +219,7 @@ def download_file(file, dir_string):
         s_file.write(buffer)
         s_file.write(resp.content)
     except Exception as ex:
-        error_log.append(("[Sync] Beim speichern der folgenden Datei ist ein Fehler aufgetreten: ", ex, file))
+        error_log.append("[Error] Beim speichern der folgenden Datei ist ein Fehler aufgetreten: ", ex, file)
     try:
         s_file.close()
     except AttributeError:
@@ -209,6 +227,8 @@ def download_file(file, dir_string):
 
 
 def get_material_list(href):
+    if show_debug_messages == 1:
+        print("[Debug] Getting Material list")
     resp = s.get(href).text
     resp = resp[resp.find("window.materialListe = ") + 23:]
     resp = resp[:resp.find("</script>") - 1]
@@ -235,6 +255,8 @@ def syncLU(destroy=False):
     # noinspection PyBroadException
     try:
         # get groups
+        if show_debug_messages == 1:
+            print("[Debug] Getting user groups")
         resp = s.get(url + "/edu/edumain.php").text
         groupList = list()
         groupmanager = resp[resp.find("class='flist'"):resp.find("class='mlist'")]
@@ -246,13 +268,15 @@ def syncLU(destroy=False):
             groupmanager = groupmanager.replace("gruppe=", "", 1).replace("&section", "", 1)
 
         # get each group's file directory
+        if show_debug_messages == 1:
+            print("[Debug] Getting file directory for each group")
         i = 0
         dir_stack = LifoQueue()
         mk_dir(LU_dir)
 
         while i < len(groupList):
             for sect, dir_sa in [("publ", "Öffentlich"), ("priv", "Privat")]:
-                print("[Sync] " + groupList[i], groupList[i + 1], dir_sa)
+                print("[Info] " + groupList[i], groupList[i + 1], dir_sa)
                 progress_label.config(text=groupList[i] + " (" + str(int(i / 2)) + "/" + str(int(len(groupList) / 2)) + ")")
                 root.update_idletasks()
 
@@ -278,7 +302,7 @@ def syncLU(destroy=False):
                         while file_name[len(file_name) - 1] == " ":
                             file_name = file_name[:-1]
                         current_file.update({"name": file_name})
-                        print("[Sync] " + current_file.get("name"))
+                        print("[Info] " + current_file.get("name"))
 
                         if current_file.get("typ") == "dir":
                             # directory
@@ -286,7 +310,7 @@ def syncLU(destroy=False):
                             mk_dir(dir_string)
                             current_material_list = get_material_list(url + "/edu/edumain.php?gruppe=" + groupList[i + 1] + "&section=" + sect + "&dir=" + current_file.get("id"))
                             n = 0
-                            print("[Sync] changed dir to", current_file.get("name"))
+                            print("[Info] changed dir to", current_file.get("name"))
                             info_label.config(text=current_file.get("name"))
                             root.update_idletasks()
                         elif current_file.get("typ") == "diropen":
@@ -312,9 +336,9 @@ def syncLU(destroy=False):
 
             i += 2
     except Exception as ex:
-        error_log.append(("Anderweitige Fehlermeldung: ", ex, str(ex.__traceback__)))
+        error_log.append(("[Error] Es ist ein unbekannter Fehler aufgetreten: ", ex, str(ex.__traceback__)))
 
-    print("[Sync] Finished with", len(error_log), "errors")
+    print("[Info] Finished with", len(error_log), "errors")
     error_log_file = open(LU_dir + "/ErrorLog.txt", "w+")
     for error in error_log:
         print(error)
@@ -336,12 +360,13 @@ def syncLU(destroy=False):
         sys.exit(0)
 
 
-auto_package_install()
 # check for available internet connection
+
 v = None
 try:
     v = requests.get("https://raw.githubusercontent.com/alexditi/RamaPortalClientsided-Projects/master/Lernumgebung%20Sync/updateLog.json", timeout=5)
 except (requests.ConnectionError, requests.Timeout):
+    print("[Error] Du bist nicht mit dem Internet verbunden!")
     messagebox.showwarning("Keine Internetverbindung!", "Stelle sicher dass du mit dem Internet verbunden ist und starte die App erneut.")
     try:
         v = requests.get("https://raw.githubusercontent.com/alexditi/RamaPortalClientsided-Projects/master/Lernumgebung%20Sync/updateLog.json", timeout=5)
@@ -404,6 +429,8 @@ browse_btn.bind("<Return>", submit_userdata)
 
 # try parsing userdata from existing userdata file
 # existing userdata file
+if show_debug_messages == 1:
+    print("[Debug] look for existing userdata file")
 try:
     userdata_reader = open(tmpdir + "/userdata_LU.json", "r")
     userdata = json.load(userdata_reader)
@@ -420,8 +447,12 @@ try:
 
 # non existing dir or file, incorrect userdata file
 except (FileNotFoundError, json.decoder.JSONDecodeError):
+    if show_debug_messages == 1:
+        print("[Debug] userdata file doesnt exists or is incorrect")
     try:
         # create dir
+        if show_debug_messages == 1:
+            print("[Debug] creating new userdata file")
         os.mkdir(tmpdir)
     except FileExistsError:
         pass
@@ -434,11 +465,18 @@ else:
     updateLog = json.loads(v.text)
     if updateLog.get("version") != version and messagebox.askyesno("Update verfügbar", "Die Version " + updateLog.get("version") + " ist nun verfügbar. Jetzt herunterladen?"):
         # update application
+        if show_debug_messages == 1:
+            print("[Debug] updating application")
         up_app = open(os.environ["userprofile"] + "/Downloads/LernumgebungSynchronisation.exe", "wb+")
         up_app.write(requests.get("https://github.com/alexditi/RamaPortalClientsided-Projects/raw/" + updateLog.get("version") + "/Lernumgebung Sync/LernumgebungSynchronisation.exe").content)
         up_app.close()
-
-        messagebox.showinfo("Download abgeschlossen!", "Die neue Datei ist im Download Ordner zu finden und kann benutzt werden. Die alte Datei kann gelöscht werden.")
+        if show_debug_messages == 1:
+            print("[Debug] successfully updated application")
+        messagebox.showinfo("Download abgeschlossen!", "Die neue Datei ist im Download Ordner zu finden.")
         exit(1)
+
+# root closing action
+root.protocol("WM_DELETE_WINDOW", on_closing)
+root.bind("<Alt-F4>", on_closing)
 
 root.mainloop()

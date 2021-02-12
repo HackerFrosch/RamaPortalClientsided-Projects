@@ -72,7 +72,7 @@ root.withdraw()
 print(os.path.abspath(__file__))
 # some global variables
 tmpdir = os.environ["localappdata"].replace("\\", "/") + "/RamaPortal Client"
-process_icon_path = os.path.abspath(__file__).replace("\RaMa-Client Sync.pyw", "") + "\process_icon.ico"
+process_icon_path = os.path.abspath(__file__).replace("\LernumgebungSynchronisation.pyw", "") + "\process_icon.ico"
 root.iconbitmap(process_icon_path)
 url = "https://portal.rama-mainz.de"
 s = requests.Session()

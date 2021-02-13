@@ -7,7 +7,6 @@ from queue import LifoQueue
 from tkinter import *
 from tkinter import messagebox, filedialog
 from threading import Thread
-import importlib
 
 
 
@@ -39,7 +38,7 @@ class ToolTip(object):
         if tw:
             tw.destroy()
 
-# import or install requests and BeautifulSoup
+# import or install requests and bs4
 try:
     import requests
     print("[Info] Packet requests ist installiert!")
@@ -53,7 +52,7 @@ try:
     from bs4 import BeautifulSoup
     print("[Info] Packet bs4 ist installiert!")
 except ImportError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "bs4"])
     print("[Info] Packet bs4 wurde installiert!")
 finally:
     from bs4 import BeautifulSoup
@@ -72,7 +71,7 @@ root.withdraw()
 print(os.path.abspath(__file__))
 # some global variables
 tmpdir = os.environ["localappdata"].replace("\\", "/") + "/RamaPortal Client"
-process_icon_path = os.path.abspath(__file__).replace("\LernumgebungSynchronisation.pyw", "") + "\process_icon.ico"
+process_icon_path = os.path.abspath(__file__).replace("LernumgebungSynchronisation.pyw", "process_icon.ico")
 root.iconbitmap(process_icon_path)
 url = "https://portal.rama-mainz.de"
 s = requests.Session()
@@ -131,7 +130,7 @@ def submit_userdata(event=""):
     else:
         username_entry.delete(0, END)
         password_entry.delete(0, END)
-        messagebox.showerror("Anmeldung fehlgeschlagen!", "Falscher Benutzername oder Passwort")
+        messagebox.showerror("Anmeldung fehlgeschlagen!", "Falscher Benutzername oder falsches Passwort")
 
 
 def insert_dir():
@@ -244,7 +243,7 @@ def syncLU(destroy=False):
     delete_cb.config(state=DISABLED)
     sync_new_cb.config(state=DISABLED)
 
-    if delete_before_sync.get() and messagebox.askyesno("Ordner löschen?", 'Soll der gesamte Ordner "Lernumgebung OfflineSync" gelöscht werden?'):
+    if delete_before_sync.get() and messagebox.askyesno("Ordner löschen?", 'Soll der Ordner "Lernumgebung OfflineSync" wirklich gelöscht werden?'):
         try:
             info_label.config(text="lösche alten Ordner")
             root.update()
@@ -346,9 +345,10 @@ def syncLU(destroy=False):
     error_log_file.close()
 
     progress_label.config(text="Fertig!")
-    e_msg = "Synchronisation mit " + str(len(error_log)) + " Fehlermeldung(en) abgeschlossen."
+    if len(error_log) < 0:
+      e_msg = "Die Synchronisation wurde erfolgreich abgeschlossen!"
     if len(error_log) > 0:
-        e_msg += " Siehe ErrorLog.txt für weitere Informationen."
+      e_msg = "Die Synchronisation wurde mit " + str(len(error_log)) + " Fehlermeldung(en) abgeschlossen. Siehe ErrorLog.txt für weitere Informationen."
     info_label.config(text=e_msg)
     settings_btn.config(state=NORMAL)
     sync_btn.config(state=NORMAL)
@@ -361,7 +361,6 @@ def syncLU(destroy=False):
 
 
 # check for available internet connection
-
 v = None
 try:
     v = requests.get("https://raw.githubusercontent.com/alexditi/RamaPortalClientsided-Projects/master/Lernumgebung%20Sync/updateLog.json", timeout=5)
@@ -472,7 +471,7 @@ else:
         up_app.close()
         if show_debug_messages == 1:
             print("[Debug] successfully updated application")
-        messagebox.showinfo("Download abgeschlossen!", "Die neue Datei ist im Download Ordner zu finden.")
+        messagebox.showinfo("Download abgeschlossen!", "Die neue Datei ist im Downloads Ordner zu finden und kann verwendet werden.")
         exit(1)
 
 # root closing action
